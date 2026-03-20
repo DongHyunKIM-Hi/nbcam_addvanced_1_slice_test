@@ -3,10 +3,12 @@ package org.example.nbcam_addvanced_1.domain.post.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.nbcam_addvanced_1.domain.post.model.dto.PostDto;
 import org.example.nbcam_addvanced_1.domain.post.model.dto.PostSummaryDto;
+import org.example.nbcam_addvanced_1.domain.post.model.request.CreatePostRequestDto;
 import org.example.nbcam_addvanced_1.domain.post.service.PostService;
 import org.example.nbcam_addvanced_1.common.filter.JwtFilter;
 import org.example.nbcam_addvanced_1.common.interceptor.UserOwnerCheckInterceptor;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -18,6 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -103,5 +106,27 @@ class PostControllerSliceTest {
             .andExpect(jsonPath("$[0].commentCount").value(1))    // ① DTO 필드명에 맞게 작성
             .andExpect(jsonPath("$[1].content").value("두 번"))
             .andExpect(jsonPath("$[1].commentCount").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "user1")    // ① username = "user1" 인 가짜 유저 주입
+    @DisplayName("게시글 생성 요청시 200 응답")
+    void createPost() throws Exception {
+
+        // given
+        CreatePostRequestDto request = new CreatePostRequestDto("테스트 게시글 내용");
+        PostDto postDto = new PostDto(1L, "테스트 게시글 내용", "user1");
+
+        given(postService.createPost("user1", "테스트 게시글 내용"))  // ② username이 "user1"로 전달되는지 확인
+            .willReturn(postDto);
+
+        // when & then
+        mockMvc.perform(post("/api/post")
+                .contentType(MediaType.APPLICATION_JSON)                      // ③ Content-Type 헤더 설정
+                .content(objectMapper.writeValueAsString(request)))           // ④ 요청 body를 JSON으로 변환
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1L))
+            .andExpect(jsonPath("$.content").value("테스트 게시글 내용"))
+            .andExpect(jsonPath("$.username").value("user1"));
     }
 }
